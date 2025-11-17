@@ -7,10 +7,12 @@ import top.clematis.aquanote.dto.ApiResponse;
 import top.clematis.aquanote.dto.SyncRequest;
 import top.clematis.aquanote.dto.SyncResponse;
 import top.clematis.aquanote.pojo.Note;
+import top.clematis.aquanote.pojo.Tag;
 import top.clematis.aquanote.service.NoteSyncService;
 import top.clematis.aquanote.mapper.NoteMapper;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notes")
@@ -73,16 +75,23 @@ public class NoteController {
     
     /**
      * 获取用户所有笔记
-     * GET /api/notes
+     * Post /api/notes
      */
-    @GetMapping
+    @PostMapping
     public ResponseEntity<ApiResponse<List<Note>>> getUserNotes(
-            @RequestHeader("User-Id") String userId) {
-        
-        List<Note> notes = noteMapper.getUserNotes(userId);
+            @RequestHeader("User-Id") String userId,@RequestBody Map<String,Integer> payLoad){
+        Integer tagId=payLoad.get("tagId");
+        List<Note> notes;
+        if(tagId==null){
+            notes= noteMapper.getUserNotes(userId);
+        }
+        else{
+            notes = noteMapper.getUserNotesByTag(userId,tagId);
+        }
+
         return ResponseEntity.ok(ApiResponse.success( "获取笔记列表成功",notes));
     }
-    
+
     /**
      * 搜索笔记
      * GET /api/notes/search?keyword=xxx
@@ -128,5 +137,17 @@ public class NoteController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 获取tag
+     * GET /api/notes/tags
+     */
+    @GetMapping("/tags")
+    public ResponseEntity<ApiResponse<List<Tag>>> getUserTags(
+            @RequestHeader("User-Id") String userId
+    ){
+        List<Tag> tags = noteMapper.getUserTags(userId);
+        return ResponseEntity.ok(ApiResponse.success(tags));
     }
 }

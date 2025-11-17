@@ -2,6 +2,7 @@ package top.clematis.aquanote.mapper;
 
 import org.apache.ibatis.annotations.*;
 import top.clematis.aquanote.pojo.Note;
+import top.clematis.aquanote.pojo.Tag;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ public interface NoteMapper {
     
     @Select("SELECT * FROM Note WHERE note_id = #{noteId}")
     Note getNoteById(@Param("noteId") String noteId);
-    
+
     @Select("SELECT MAX(sync_version) FROM Note WHERE user_id = #{userId}")
     Long getMaxSyncVersion(@Param("userId") String userId);
     
@@ -28,7 +29,10 @@ public interface NoteMapper {
     
     @Select("SELECT * FROM Note WHERE user_id = #{userId} AND is_deleted = false ORDER BY updated_at DESC")
     List<Note> getUserNotes(@Param("userId") String userId);
-    
+
+    @Select("SELECT n.* FROM note n JOIN notetag nt ON n.note_id = nt.note_id WHERE n.user_id = #{userId} AND nt.tag_id = #{tagId} AND n.is_deleted = 0 ORDER BY updated_at DESC")
+    List<Note> getUserNotesByTag(@Param("userId") String userId, @Param("tagId") Integer tagId);
+
     @Select("SELECT * FROM Note WHERE user_id = #{userId} AND is_deleted = false AND " +
             "(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))")
     List<Note> searchNotes(@Param("userId") String userId, @Param("keyword") String keyword);
@@ -36,4 +40,7 @@ public interface NoteMapper {
     @Update("UPDATE Note SET is_deleted = true, updated_at = NOW(), sync_version = sync_version + 1 " +
             "WHERE note_id = #{noteId} AND user_id = #{userId}")
     int softDeleteNote(@Param("noteId") String noteId, @Param("userId") String userId);
+
+    @Select("SELECT * from tag t WHERE user_id= #{userId} ORDER BY tag_id")
+    List<Tag> getUserTags(@Param("userId") String userId);
 }

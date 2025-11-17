@@ -12,5 +12,4 @@ import lombok.Builder;
 public class Tag {
     private Integer tagId;
     private String tagName;
-    private String userId;
 }
