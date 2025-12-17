@@ -1,6 +1,8 @@
 package top.clematis.aquanote.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import top.clematis.aquanote.dto.ApiResponse;
@@ -18,7 +20,8 @@ import java.util.Map;
 @RequestMapping("/api/notes")
 @RequiredArgsConstructor
 public class NoteController {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(NoteController.class);
     private final NoteSyncService noteSyncService;
     private final NoteMapper noteMapper;
 
@@ -149,5 +152,27 @@ public class NoteController {
     ){
         List<Tag> tags = noteMapper.getUserTags(userId);
         return ResponseEntity.ok(ApiResponse.success(tags));
+    }
+
+    /**
+     * 新增Tag
+     * POST /api/notes/addTag
+     */
+    @PostMapping("/addTag")
+    public ResponseEntity<ApiResponse<Integer>> addUserTags(
+            @RequestHeader("User-Id") String userId,@RequestBody Map<String,String> tagName
+    ){
+        try {
+            Integer tagId = noteMapper.addUserTag(userId, tagName.get("name"));
+            if(tagId==null){
+                return ResponseEntity.ok(ApiResponse.error("tagName exist"));
+            }
+
+        }
+        catch(Exception e){
+            System.out.println(e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("tagName exist"));
+        }
+        return ResponseEntity.ok(ApiResponse.success("添加成功",null));
     }
 }

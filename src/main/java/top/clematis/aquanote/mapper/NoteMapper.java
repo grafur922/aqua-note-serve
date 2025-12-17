@@ -27,7 +27,7 @@ public interface NoteMapper {
             "WHERE note_id = #{note.noteId} AND sync_version = #{originalVersion}")
     int updateNoteWithVersionCheck(@Param("note") Note note, @Param("originalVersion") Long originalVersion);
     
-    @Select("SELECT * FROM Note WHERE user_id = #{userId} AND is_deleted = false ORDER BY updated_at DESC")
+    @Select("SELECT * FROM Note WHERE user_id = #{userId} ORDER BY updated_at DESC")
     List<Note> getUserNotes(@Param("userId") String userId);
 
     @Select("SELECT n.* FROM note n JOIN notetag nt ON n.note_id = nt.note_id WHERE n.user_id = #{userId} AND nt.tag_id = #{tagId} AND n.is_deleted = 0 ORDER BY updated_at DESC")
@@ -43,4 +43,7 @@ public interface NoteMapper {
 
     @Select("SELECT * from tag t WHERE user_id= #{userId} ORDER BY tag_id")
     List<Tag> getUserTags(@Param("userId") String userId);
+
+    @Insert("INSERT INTO tag (tag_name, user_id) VALUES (#{tagName},#{userId})")
+    Integer addUserTag(@Param("userId") String userId, @Param("tagName") String tagName);
 }
