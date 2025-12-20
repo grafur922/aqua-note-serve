@@ -3,8 +3,12 @@ package top.clematis.aquanote.controller;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import top.clematis.aquanote.config.AquaSecurityProperties;
 import top.clematis.aquanote.dto.ApiResponse;
 import top.clematis.aquanote.dto.SyncRequest;
 import top.clematis.aquanote.dto.SyncResponse;
@@ -12,18 +16,29 @@ import top.clematis.aquanote.pojo.Note;
 import top.clematis.aquanote.pojo.Tag;
 import top.clematis.aquanote.service.NoteSyncService;
 import top.clematis.aquanote.mapper.NoteMapper;
+import top.clematis.aquanote.util.SecurityUtils;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notes")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class NoteController {
 
     private static final Logger log = LoggerFactory.getLogger(NoteController.class);
     private final NoteSyncService noteSyncService;
     private final NoteMapper noteMapper;
+    private final AquaSecurityProperties securityProperties;
+
+    private <T> ResponseEntity<ApiResponse<T>> unauthorized() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(401, "未认证"));
+    }
+
+    private String resolveUserId(Jwt jwt, String userIdHeader) {
+        return SecurityUtils.resolveUserId(jwt, userIdHeader, securityProperties.isDebugAllowUserIdHeader());
+    }
 
     /**
      * 同步笔记
@@ -31,8 +46,14 @@ public class NoteController {
      */
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<SyncResponse>> syncNotes(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @RequestBody SyncRequest syncRequest) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         SyncResponse syncResponse = noteSyncService.syncNotes(userId, syncRequest);
 //        System.out.println(syncResponse);
@@ -47,8 +68,14 @@ public class NoteController {
     //暂未对接
     @PostMapping("/{noteId}/resolve-conflict/server")
     public ResponseEntity<ApiResponse<SyncResponse>> resolveConflictWithServer(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable String noteId) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         SyncResponse response = noteSyncService.resolveConflictWithServerVersion(userId, noteId);
         
@@ -63,8 +90,14 @@ public class NoteController {
     //暂未对接
     @PostMapping("/resolve-conflict/client")
     public ResponseEntity<ApiResponse<SyncResponse>> resolveConflictWithClient(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @RequestBody Note clientNote) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         SyncResponse response = noteSyncService.resolveConflictWithClientVersion(userId, clientNote);
         
@@ -82,7 +115,13 @@ public class NoteController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<List<Note>>> getUserNotes(
-            @RequestHeader("User-Id") String userId,@RequestBody Map<String,Integer> payLoad){
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String,Integer> payLoad){
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         Integer tagId=payLoad.get("tagId");
         List<Note> notes;
         if(tagId==null){
@@ -101,8 +140,14 @@ public class NoteController {
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<Note>>> searchNotes(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @RequestParam String keyword) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         List<Note> notes = noteMapper.searchNotes(userId, keyword);
         return ResponseEntity.ok(ApiResponse.success( "搜索完成",notes));
@@ -114,8 +159,14 @@ public class NoteController {
      */
     @GetMapping("/{noteId}")
     public ResponseEntity<ApiResponse<Note>> getNote(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable String noteId) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         Note note = noteMapper.getNoteById(noteId);
         if (note == null || !note.getUserId().equals(userId)) {
@@ -131,8 +182,14 @@ public class NoteController {
      */
     @DeleteMapping("/{noteId}")
     public ResponseEntity<ApiResponse<Void>> deleteNote(
-            @RequestHeader("User-Id") String userId,
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable String noteId) {
+
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         
         int result = noteMapper.softDeleteNote(noteId, userId);
         if (result > 0) {
@@ -148,8 +205,13 @@ public class NoteController {
      */
     @GetMapping("/tags")
     public ResponseEntity<ApiResponse<List<Tag>>> getUserTags(
-            @RequestHeader("User-Id") String userId
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt
     ){
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         List<Tag> tags = noteMapper.getUserTags(userId);
         return ResponseEntity.ok(ApiResponse.success(tags));
     }
@@ -160,8 +222,14 @@ public class NoteController {
      */
     @PostMapping("/addTag")
     public ResponseEntity<ApiResponse<Integer>> addUserTags(
-            @RequestHeader("User-Id") String userId,@RequestBody Map<String,String> tagName
+            @RequestHeader(value = "User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String,String> tagName
     ){
+        String userId = resolveUserId(jwt, userIdHeader);
+        if (userId == null) {
+            return unauthorized();
+        }
         try {
             Integer tagId = noteMapper.addUserTag(userId, tagName.get("name"));
             if(tagId==null){

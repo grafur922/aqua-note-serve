@@ -18,3 +18,12 @@ logging:
   level:
     top.clematis.aquanote: debug
     org.springframework.security: debug
+
+aqua:
+  security:
+    debug-permit-notes: false
+    debug-allow-user-id-header: false
+    jwt:
+      secret: ${AQUA_JWT_SECRET:A5ngBC0OFhE5BFb1EoGYtvFvEwXOlxeOrwUA}
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 2592000
